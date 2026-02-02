@@ -1,0 +1,18 @@
+name: risuai
+
+services:
+  risuai:
+    image: ghcr.io/kwaroran/risuai:latest
+    container_name: risuai
+    restart: always
+    init: true
+    expose:
+      - "6001"
+    volumes:
+      - ./save:/app/save
+    networks:
+      - caddy-network
+
+networks:
+  caddy-network:
+    external: true

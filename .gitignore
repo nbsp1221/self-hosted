@@ -1,1 +1,31 @@
-config.yaml
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDE specific files
+.idea/
+*.code-workspace
+
+# Backup files
+*.bak
+*.backup
+*~

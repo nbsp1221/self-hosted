@@ -1,0 +1,53 @@
+name: openclaw
+
+services:
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789"]
+    restart: unless-stopped
+    init: true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+    volumes:
+      - ./.openclaw:/home/node/.openclaw
+      - ./.openclaw/workspace:/home/node/.openclaw/workspace
+    networks:
+      - openclaw-network
+      - caddy-network
+    healthcheck:
+      test: ["CMD-SHELL", "node dist/index.js health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  openclaw-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["node", "dist/index.js"]
+    init: true
+    stdin_open: true
+    tty: true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      BROWSER: echo
+    volumes:
+      - ./.openclaw:/home/node/.openclaw
+      - ./.openclaw/workspace:/home/node/.openclaw/workspace
+    networks:
+      - openclaw-network
+
+networks:
+  openclaw-network:
+    name: openclaw-network
+    driver: bridge
+  caddy-network:
+    name: caddy-network
+    external: true

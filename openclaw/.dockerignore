@@ -1,0 +1,15 @@
+# Prevent secrets/state from entering the Docker build context.
+.openclaw/
+.env
+.env.*
+
+# Local build artifacts.
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# VCS metadata not needed for this wrapper build.
+.git/
+.gitignore

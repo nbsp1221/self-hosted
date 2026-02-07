@@ -5,6 +5,7 @@
     "isready",
     "litellm",
     "llms",
+    "openclaw",
     "risuai"
   ]
 }

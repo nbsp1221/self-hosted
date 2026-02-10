@@ -9,6 +9,9 @@ of CLI tools (for example `gh`, `jq`, `rg`) so the agent can work smoothly.
 - Persistent data lives on the host under `./.openclaw/` so container recreation is
   safe and expected.
 - We still keep the compose file minimal and configurable via `.env`.
+- We also persist `/home/node` in a named Docker volume to keep caches (including
+  Playwright browser downloads) across container recreation without bind-mounting
+  a large host directory.
 
 ## Quick start
 
@@ -102,7 +105,7 @@ Docs: https://docs.openclaw.ai/channels
 ## Health check
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLAW_GATEWAY_TOKEN"
+docker compose exec openclaw-gateway node dist/index.js health
 ```
 
 ## Device pairing (if required)
@@ -131,7 +134,7 @@ docker compose run --rm openclaw-cli \
 
 ## Configuration
 
-- This stack intentionally binds the gateway with `--bind lan` (see `openclaw/compose.yaml`).
+- This stack intentionally binds the gateway with `--bind lan` (see `compose.yaml`).
   - This is required for reverse-proxy access from other containers on `caddy-network`.
   - If you change it to loopback, your reverse proxy will not be able to reach the gateway.
 - `OPENCLAW_GATEWAY_TOKEN` is required for access control in this stack (the setup script generates it
@@ -143,6 +146,10 @@ The following host paths are mounted into the containers:
 
 - `./.openclaw` → `/home/node/.openclaw`
 - `./.openclaw/workspace` → `/home/node/.openclaw/workspace`
+
+Additionally, a named Docker volume is mounted:
+
+- `openclaw-home` → `/home/node`
 
 This mirrors the official guidance: long-lived state belongs on the host and
 should persist across restarts.

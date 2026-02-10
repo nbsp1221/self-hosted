@@ -1,31 +1,35 @@
 #!/usr/bin/env python3
-from __future__ import annotations
 
 import os
 import secrets
 import subprocess
+import shutil
 from pathlib import Path
+from typing import TypeAlias
 
 
 ROOT = Path(__file__).resolve().parent
 ENV_PATH = ROOT / ".env"
+ENV_EXAMPLE_PATH = ROOT / ".env.example"
+
+CliArg: TypeAlias = str | list[str] | tuple[str, ...]
 
 
-def _read_text(path: Path) -> str:
+def read_text(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return ""
 
 
-def _upsert_env_kv(path: Path, key: str, value: str) -> bool:
+def upsert_env_kv(path: Path, key: str, value: str) -> bool:
     """
     Insert or replace KEY=VALUE in a dotenv file.
     - Preserves unknown lines, comments, and ordering.
     - If the key exists but is empty (KEY=), it will be filled.
     Returns True if the file was modified.
     """
-    original = _read_text(path)
+    original = read_text(path)
     lines = original.splitlines(keepends=True) if original else []
 
     def parse_kv(line: str) -> tuple[str | None, str | None]:
@@ -63,13 +67,66 @@ def _upsert_env_kv(path: Path, key: str, value: str) -> bool:
     return changed
 
 
-def _run(cmd: list[str]) -> None:
+def dotenv_get(path: Path, key: str) -> str:
+    for raw in read_text(path).splitlines():
+        s = raw.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        if k.strip() != key:
+            continue
+        return v.strip()
+    return ""
+
+
+def run(*args: str) -> None:
     # Let Docker/Compose print their own error messages.
-    subprocess.run(cmd, cwd=str(ROOT), check=True)
+    subprocess.run(list(args), cwd=str(ROOT), check=True)
+
+
+def flatten_cli_args(*args: CliArg) -> list[str]:
+    out: list[str] = []
+    for arg in args:
+        if isinstance(arg, str):
+            out.append(arg)
+            continue
+        if isinstance(arg, (list, tuple)):
+            out.extend(arg)
+            continue
+        raise TypeError(f"Unsupported CLI arg type: {type(arg)!r}")
+    return out
+
+
+def run_cli(*args: CliArg) -> None:
+    # Let Docker/Compose print their own error messages.
+    subprocess.run(flatten_cli_args(*args), cwd=str(ROOT), check=True)
+
+
+def openclaw(*args: CliArg) -> None:
+    """Run an OpenClaw CLI command inside the compose one-off container."""
+    run_cli("docker", "compose", "run", "--rm", "openclaw-cli", *args)
+
+
+def openclaw_node(*args: CliArg) -> None:
+    """Run a Node entrypoint inside the OpenClaw CLI container."""
+    run_cli(
+        "docker",
+        "compose",
+        "run",
+        "--rm",
+        ["--entrypoint", "node"],
+        "openclaw-cli",
+        *args,
+    )
 
 
 def main() -> int:
+    if not ENV_PATH.exists() and ENV_EXAMPLE_PATH.exists():
+        shutil.copyfile(ENV_EXAMPLE_PATH, ENV_PATH)
+
     token = os.environ.get("OPENCLAW_GATEWAY_TOKEN", "").strip()
+    if not token:
+        token = dotenv_get(ENV_PATH, "OPENCLAW_GATEWAY_TOKEN")
     if not token:
         token = secrets.token_hex(32)
 
@@ -77,42 +134,52 @@ def main() -> int:
     (ROOT / ".openclaw").mkdir(parents=True, exist_ok=True)
     (ROOT / ".openclaw" / "workspace").mkdir(parents=True, exist_ok=True)
 
-    _upsert_env_kv(ENV_PATH, "OPENCLAW_GATEWAY_TOKEN", token)
+    # If `.env` exists and already has a value, keep it (stable token).
+    upsert_env_kv(ENV_PATH, "OPENCLAW_GATEWAY_TOKEN", token)
 
+    # ---------------------------
+    # Onboard + config sync
+    # ---------------------------
     # Baseline onboarding (non-interactive).
     # - Skips channels: bot tokens (Telegram/Discord/etc) are user-provided.
     # - Skips skills/UI and health: keep setup fast and avoid requiring a running gateway.
-    _run(
-        [
-            "docker",
-            "compose",
-            "run",
-            "--rm",
-            "openclaw-cli",
-            "onboard",
-            "--non-interactive",
-            "--accept-risk",
-            "--mode",
-            "local",
-            "--gateway-bind",
-            "lan",
-            "--gateway-port",
-            "18789",
-            "--gateway-auth",
-            "token",
-            "--gateway-token",
-            token,
-            "--skip-channels",
-            "--skip-skills",
-            "--skip-ui",
-            "--skip-health",
-            "--no-install-daemon",
-        ]
+    openclaw(
+        "onboard",
+        "--non-interactive",
+        "--accept-risk",
+        ["--mode", "local"],
+        ["--gateway-bind", "lan"],
+        ["--gateway-port", "18789"],
+        ["--gateway-auth", "token"],
+        ["--gateway-token", token],
+        "--skip-channels",
+        "--skip-skills",
+        "--skip-ui",
+        "--skip-health",
+        "--no-install-daemon",
     )
 
-    # Start the gateway.
-    _run(["docker", "compose", "up", "-d", "openclaw-gateway"])
+    # Keep CLI and gateway in sync with the compose-provided token.
+    openclaw("config", "set", "gateway.auth.token", token)
 
+    # ---------------------------
+    # Browser (Playwright)
+    # ---------------------------
+    # Official Docker doc "power-user" path:
+    # - persist `/home/node` (compose volume)
+    # - set PLAYWRIGHT_BROWSERS_PATH (compose env)
+    # - install chromium via playwright-core CLI (avoid npx override conflicts)
+    #
+    # Keep this idempotent: if chromium is already installed, it should be fast.
+    openclaw_node("/app/node_modules/playwright-core/cli.js", "install", "chromium")
+
+    # Default browser config for Docker: use the managed browser profile, headless.
+    openclaw("config", "set", "browser.defaultProfile", "openclaw")
+    openclaw("config", "set", "browser.headless", "true")
+    openclaw("config", "set", "browser.noSandbox", "true")
+
+    # Start the gateway.
+    run_cli("docker", "compose", "up", "-d", "openclaw-gateway")
     print("")
     print("Next steps:")
     print("")

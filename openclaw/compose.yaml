@@ -8,11 +8,10 @@ services:
     command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789"]
     restart: unless-stopped
     init: true
-    environment:
-      HOME: /home/node
-      TERM: xterm-256color
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+    env_file:
+      - .env
     volumes:
+      - openclaw-home:/home/node
       - ./.openclaw:/home/node/.openclaw
       - ./.openclaw/workspace:/home/node/.openclaw/workspace
     networks:
@@ -33,12 +32,12 @@ services:
     init: true
     stdin_open: true
     tty: true
+    env_file:
+      - .env
     environment:
-      HOME: /home/node
-      TERM: xterm-256color
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       BROWSER: echo
     volumes:
+      - openclaw-home:/home/node
       - ./.openclaw:/home/node/.openclaw
       - ./.openclaw/workspace:/home/node/.openclaw/workspace
     networks:
@@ -51,3 +50,7 @@ networks:
   caddy-network:
     name: caddy-network
     external: true
+
+volumes:
+  openclaw-home:
+    name: openclaw-home

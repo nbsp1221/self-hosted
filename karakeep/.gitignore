@@ -1,0 +1,3 @@
+/.karakeep/**
+!/.karakeep/**/
+!/.karakeep/**/.gitkeep

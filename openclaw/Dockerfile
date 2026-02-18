@@ -64,5 +64,9 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/node && \
 RUN ln -sf /usr/bin/batcat /usr/local/bin/bat && \
     ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
+# Provide a stable CLI wrapper so users can run `openclaw ...` directly.
+RUN printf '%s\n' '#!/bin/sh' 'exec node /app/dist/index.js "$@"' >/usr/local/bin/openclaw && \
+    chmod +x /usr/local/bin/openclaw
+
 # Switch back to the non-root user.
 USER node

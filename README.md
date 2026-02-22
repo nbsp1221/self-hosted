@@ -57,6 +57,7 @@ docker compose down
 
 | Service | Path | Status | Notes |
 | --- | --- | --- | --- |
+| Monitoring | [`monitoring/`](monitoring/) | maintained | Prometheus + node-exporter + cAdvisor + Grafana. See `monitoring/README.md`. |
 | Karakeep | [`karakeep/`](karakeep/) | maintained | Bookmark manager with full-text search and optional AI tagging/summaries. See `karakeep/README.md`. |
 | LiteLLM Proxy + Postgres | [`litellm/`](litellm/) | maintained | Standardized LLM proxy. See `litellm/README.md`. |
 | OpenClaw Gateway + CLI | [`openclaw/`](openclaw/) | maintained | Agent gateway and CLI onboarding. See `openclaw/README.md` (then run `cd openclaw && python3 setup.py`). |

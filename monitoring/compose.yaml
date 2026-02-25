@@ -17,6 +17,7 @@ services:
       - prometheus-data:/prometheus
     depends_on:
       - node-exporter
+      - smartctl-exporter
       - cadvisor
     networks:
       - monitoring-network
@@ -42,6 +43,17 @@ services:
     volumes:
       - /:/host:ro,rslave
       - /run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    networks:
+      - monitoring-network
+
+  smartctl-exporter:
+    image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
+    restart: unless-stopped
+    init: true
+    privileged: true
+    user: root
+    expose:
+      - "9633"
     networks:
       - monitoring-network
 

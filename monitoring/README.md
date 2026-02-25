@@ -9,6 +9,7 @@ This stack provides:
 - Prometheus for metrics scraping and storage
 - node-exporter for host-level metrics (CPU, memory, disk, filesystem, processes, systemd)
 - cAdvisor for container-level metrics
+- smartctl-exporter for disk health metrics (SMART / SSD wear / temperature)
 - Grafana for dashboards and visualization
 
 Current default scrape targets:
@@ -16,10 +17,11 @@ Current default scrape targets:
 - `prometheus:9090` (self metrics)
 - `node-exporter:9100` (host metrics)
 - `cadvisor:8080` (container metrics)
+- `smartctl-exporter:9633` (disk SMART metrics)
 
 ## Architecture
 
-- `prometheus`, `node-exporter`, and `cadvisor` run on `monitoring-network`
+- `prometheus`, `node-exporter`, `cadvisor`, and `smartctl-exporter` run on `monitoring-network`
 - `grafana` runs on `monitoring-network` and also joins external `caddy-network`
 - Prometheus and Grafana data are persisted in named volumes
 
@@ -36,6 +38,8 @@ Current default scrape targets:
 - Docker Engine
 - Docker Compose v2 (`docker compose`)
 - External reverse proxy network `caddy-network`
+
+For SMART collection, `smartctl-exporter` runs as `root` in a privileged container.
 
 Create the external network once if needed:
 
@@ -71,7 +75,7 @@ docker compose exec -T prometheus wget -qO- \
   'http://127.0.0.1:9090/api/v1/query?query=up' | jq .
 ```
 
-Expected: `prometheus`, `node-exporter`, and `cadvisor` appear with value `1`.
+Expected: `prometheus`, `node-exporter`, `cadvisor`, and `smartctl-exporter` appear with value `1`.
 
 Check Grafana health:
 
@@ -85,6 +89,7 @@ Provisioned at startup from `grafana/dashboards/`:
 
 - `node-exporter-full.json`
 - `cadvisor-dashboard.json`
+- `retn0-smartctl-exporter-dashboard.json`
 
 Home dashboard path is controlled by:
 

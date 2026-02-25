@@ -13,6 +13,7 @@
     "nextauth",
     "openclaw",
     "risuai",
+    "smartctl",
     "zenika"
   ]
 }

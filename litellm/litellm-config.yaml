@@ -1,3 +1,8 @@
+x-copilot-litellm-params: &copilot_litellm_params
+  extra_headers:
+    editor-version: "vscode/1.95.0"
+    editor-plugin-version: "copilot-chat/0.26.7"
+
 general_settings:
   block_robots: true
   store_model_in_db: true
@@ -11,34 +16,26 @@ litellm_settings:
   drop_params: true
 
 model_list:
-  - model_name: github-copilot/gpt-5.2-codex
-    model_info:
-      mode: responses
-    litellm_params:
-      model: github_copilot/gpt-5.2-codex
-      extra_headers:
-        editor-version: "vscode/1.95.0"
-        editor-plugin-version: "copilot-chat/0.26.7"
-
   - model_name: github-copilot/gpt-5-mini
     model_info:
       mode: responses
     litellm_params:
       model: github_copilot/gpt-5-mini
-      extra_headers:
-        editor-version: "vscode/1.95.0"
-        editor-plugin-version: "copilot-chat/0.26.7"
+      <<: *copilot_litellm_params
 
-  - model_name: github-copilot/claude-opus-4.5
+  - model_name: github-copilot/gpt-5.3-codex
+    model_info:
+      mode: responses
     litellm_params:
-      model: github_copilot/claude-opus-4.5
-      extra_headers:
-        editor-version: "vscode/1.95.0"
-        editor-plugin-version: "copilot-chat/0.26.7"
+      model: github_copilot/gpt-5.3-codex
+      <<: *copilot_litellm_params
 
-  - model_name: github-copilot/gemini-3-pro-preview
+  - model_name: github-copilot/claude-sonnet-4.6
     litellm_params:
-      model: github_copilot/gemini-3-pro-preview
-      extra_headers:
-        editor-version: "vscode/1.95.0"
-        editor-plugin-version: "copilot-chat/0.26.7"
+      model: github_copilot/claude-sonnet-4.6
+      <<: *copilot_litellm_params
+
+  - model_name: github-copilot/gemini-3.1-pro-preview
+    litellm_params:
+      model: github_copilot/gemini-3.1-pro-preview
+      <<: *copilot_litellm_params

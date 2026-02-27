@@ -17,6 +17,7 @@ services:
       - prometheus-data:/prometheus
     depends_on:
       - node-exporter
+      - dcgm-exporter
       - smartctl-exporter
       - cadvisor
     networks:
@@ -43,6 +44,18 @@ services:
     volumes:
       - /:/host:ro,rslave
       - /run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    networks:
+      - monitoring-network
+
+  dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:4.5.2-4.8.1-ubuntu22.04
+    restart: unless-stopped
+    init: true
+    cap_add:
+      - SYS_ADMIN
+    gpus: all
+    expose:
+      - "9400"
     networks:
       - monitoring-network
 

@@ -1,0 +1,12 @@
+---
+description: "Markdown conventions and formatting guidelines"
+globs: ["**/*.md", "**/*.mdc"]
+alwaysApply: false
+---
+# Markdown Conventions
+
+- Add blank lines after all heading levels (# through ######)
+- Use only one H1 heading per document
+- Use dashes (-) consistently for unordered lists
+- Use sequential numbering (1, 2, 3...) for ordered lists
+- End files with a single newline character

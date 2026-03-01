@@ -1,0 +1,35 @@
+---
+description: "Complete MDC frontmatter preservation workflow for reading and writing .mdc rule files"
+globs:
+alwaysApply: true
+---
+# MDC Frontmatter Preservation Rules
+
+## Reading Rule
+
+ALWAYS use terminal commands when reading .mdc files to preserve frontmatter visibility.
+
+- Cursor internally parses .mdc files and strips frontmatter when using standard file reading tools
+- Only terminal commands (`cat`, `head`, `tail`, etc.) show complete file content including frontmatter
+- Essential for verifying rule configurations and troubleshooting
+
+## Writing Rule
+
+When creating or editing .mdc files:
+
+1. Create markdown content first using standard editing tools
+2. Generate frontmatter template as code block for user
+3. Instruct user to manually copy template into Cursor UI frontmatter fields
+4. Recommend terminal verification to ensure frontmatter preservation
+
+### Frontmatter Template
+
+Provide this template to users:
+
+```yaml
+---
+description: "Brief, actionable description under 120 characters"
+globs: ["**/*.ext"] # Optional: file patterns
+alwaysApply: false
+---
+```

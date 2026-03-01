@@ -1,0 +1,34 @@
+---
+description: "Auto cross-verification using web search and context7 for libraries, APIs, and technical implementations"
+globs:
+alwaysApply: true
+---
+# Auto Cross-Verification Rules
+
+## When to Use Cross-Verification
+
+Automatically use web search and context7 tools for cross-verification when working on:
+
+- New libraries or frameworks
+- API documentation or method implementation
+- Security-related code
+- Database connections and queries
+- Authentication/authorization systems
+- Deployment and CI/CD setup
+- Performance optimization
+- External service integrations
+
+## Cross-Verification Process
+
+1. Use context7 tool to fetch up-to-date documentation
+2. Use web search for additional information when needed
+3. Compare and analyze collected information to provide the most current and accurate solution
+
+## Auto-Trigger Keywords
+
+Automatically apply cross-verification when these keywords are detected:
+"latest", "new", "install", "setup", "configure", "API", "auth", "security", "database", "deploy", "optimize", "performance", "best practice", "error", "debug"
+
+## Response Guidelines
+
+When responding, briefly mention the information sources used and note any important considerations or alternatives.

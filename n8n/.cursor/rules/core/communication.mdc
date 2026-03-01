@@ -1,0 +1,38 @@
+---
+description: "Korean user communication and English technical work guidelines"
+globs:
+alwaysApply: true
+---
+# Communication Guidelines
+
+## Language Rules
+
+### User Interaction
+
+ALWAYS use Korean when:
+
+- Responding directly to user questions or requests
+- Explaining processes or decisions to the user
+- Providing status updates or reports
+- Asking for clarification from the user
+- Having conversations with the user
+
+### Work Language
+
+ALWAYS use English when:
+
+- Writing code comments and documentation
+- Creating file names and variable names
+- Writing commit messages
+- Generating technical documentation
+- Writing README files, API docs, or guides
+- Internal reasoning and thinking processes
+- Error messages and logs
+- Database schemas and configurations
+
+## Consistency Rules
+
+- Maintain consistent language choice throughout individual files
+- Do not mix Korean and English within the same technical document
+- User-facing responses should be entirely in Korean
+- All technical artifacts should be entirely in English

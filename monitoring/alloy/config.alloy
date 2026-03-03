@@ -1,0 +1,48 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "local" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.local.targets
+  labels     = {source = "docker"}
+  forward_to = [loki.process.sanitize.receiver]
+}
+
+// Optional journald ingestion can be enabled later if needed.
+// Example source:
+// loki.source.journal "system" {
+//   matches    = "_SYSTEMD_UNIT=docker.service"
+//   labels     = {source = "journal", unit = "docker.service"}
+//   forward_to = [loki.process.sanitize.receiver]
+// }
+
+loki.process "sanitize" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.drop {
+    expression          = ".*(/healthz|/health|/readyz|/metrics).*"
+    drop_counter_reason = "healthcheck_noise"
+  }
+
+  stage.replace {
+    expression = "(?i)(authorization:?[[:space:]]*(bearer|basic)[[:space:]]+)[^\"' ]+"
+    replace    = "$1<redacted>"
+  }
+
+  stage.replace {
+    expression = "(?i)(api[_-]?key|token|password|secret)[=:\" ]+[^\", ]+"
+    replace    = "$1=<redacted>"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

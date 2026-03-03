@@ -1,6 +1,6 @@
 # Monitoring
 
-Prometheus-based monitoring stack for host and container visibility.
+Prometheus-based monitoring stack for host, container, and log visibility.
 
 ## Overview
 
@@ -11,27 +11,26 @@ This stack provides:
 - cAdvisor for container-level metrics
 - smartctl-exporter for disk health metrics (SMART / SSD wear / temperature)
 - dcgm-exporter for NVIDIA GPU metrics (utilization, temperature, clocks, power, memory)
+- blackbox-exporter for HTTP probing
+- Loki for log storage and querying
+- Alloy for log collection (Docker) and log sanitization
 - Grafana for dashboards and visualization
-
-Current default scrape targets:
-
-- `prometheus:9090` (self metrics)
-- `node-exporter:9100` (host metrics)
-- `cadvisor:8080` (container metrics)
-- `smartctl-exporter:9633` (disk SMART metrics)
-- `dcgm-exporter:9400` (NVIDIA GPU metrics)
 
 ## Architecture
 
-- `prometheus`, `node-exporter`, `cadvisor`, `smartctl-exporter`, and `dcgm-exporter` run on `monitoring-network`
-- `grafana` runs on `monitoring-network` and also joins external `caddy-network`
-- Prometheus and Grafana data are persisted in named volumes
+- All core services run on `monitoring-network`
+- `grafana` and `blackbox-exporter` also join external `caddy-network`
+- Prometheus scrapes exporters, Loki, and Alloy metrics
+- Alloy forwards logs to Loki
+- Prometheus, Grafana, Loki, and Alloy use named volumes for persistence
 
 ## Directory Layout
 
 - `compose.yaml`: stack definition
 - `.env.example`: environment variables for Grafana
-- `prometheus/prometheus.yml`: scrape configuration
+- `prometheus/prometheus.yml`: scrape config
+- `loki/config.yml`: Loki local storage + retention config
+- `alloy/config.alloy`: Docker log collection and masking pipeline
 - `grafana/provisioning/`: datasource and dashboard provisioning
 - `grafana/dashboards/`: dashboard JSON files loaded at startup
 
@@ -72,16 +71,32 @@ Grafana is intentionally exposed only through your reverse proxy.
 
 ## Verification
 
-Check Prometheus scrape status from inside the stack:
+Prometheus target health (`up`):
 
 ```bash
 docker compose exec -T prometheus wget -qO- \
   'http://127.0.0.1:9090/api/v1/query?query=up' | jq .
 ```
 
-Expected: `prometheus`, `node-exporter`, `cadvisor`, `smartctl-exporter`, and `dcgm-exporter` appear with value `1`.
+Prometheus config validation:
 
-Check Grafana health:
+```bash
+docker compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml
+```
+
+Loki readiness:
+
+```bash
+docker compose exec -T loki wget -qO- http://127.0.0.1:3100/ready
+```
+
+Alloy readiness:
+
+```bash
+docker compose exec -T alloy wget -qO- http://127.0.0.1:12345/-/ready
+```
+
+Grafana health:
 
 ```bash
 docker compose exec -T grafana wget -qO- http://127.0.0.1:3000/api/health
@@ -95,10 +110,9 @@ Provisioned at startup from `grafana/dashboards/`:
 - `cadvisor-dashboard.json`
 - `nvidia-dcgm-exporter-dashboard.json`
 - `retn0-smartctl-exporter-dashboard.json`
+- `blackbox-exporter-http-prober-dashboard.json`
 
-Home dashboard path is controlled by:
-
-- `GRAFANA_HOME_DASHBOARD_PATH` in `.env`
+Home dashboard path is controlled by `GRAFANA_HOME_DASHBOARD_PATH` in `.env`.
 
 ## Persistence
 
@@ -106,12 +120,16 @@ Named volumes:
 
 - `prometheus-data` (`/prometheus`)
 - `grafana-data` (`/var/lib/grafana`)
+- `loki-data` (`/loki`)
+- `alloy-data` (`/var/lib/alloy/data`)
 
 Inspect volume locations on host:
 
 ```bash
 docker volume inspect prometheus-data
 docker volume inspect grafana-data
+docker volume inspect loki-data
+docker volume inspect alloy-data
 ```
 
 ## Operations
@@ -124,7 +142,7 @@ docker compose restart
 docker compose down
 ```
 
-Destructive reset (removes all monitoring history and Grafana state):
+Destructive reset (removes all monitoring history and Grafana/Loki/Alloy state):
 
 ```bash
 docker compose down -v

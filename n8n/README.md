@@ -1,176 +1,135 @@
-<div align="center">
+# n8n
 
-# 🚀 n8n Docker Setup
+n8n stack for this repository.
 
-**Production-ready n8n workflow automation setup**
+This directory is the canonical n8n deployment definition for `self-hosted/`.
+It runs n8n in regular mode behind an external reverse proxy and keeps supporting services private on an internal Docker network.
 
-[![n8n](https://img.shields.io/badge/n8n-FF6D5A?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
-[![Caddy](https://img.shields.io/badge/Caddy-1F88C0?style=for-the-badge&logo=caddy&logoColor=white)](https://caddyserver.com)
+## What This Stack Contains
 
-*Self-hosted workflow automation with Caddy reverse proxy*
+- `n8n`: UI, API, and public webhooks
+- `postgres`: main n8n database
+- `redis`: internal shared-state store for workflows
 
-[⚡ Quick Start](#-quick-start) •
-[⚙️ Configuration](#️-configuration) •
-[🌐 Caddy Setup](#-caddy-setup) •
-[🛠️ Management](#️-management) •
-[📚 Resources](#-resources)
+Important: Redis is not used for n8n queue mode here.
+It exists only for workflow-level shared state such as TTL-based keys accessed through the built-in Redis node or Redis Trigger.
 
-</div>
+## Current Design Choices
 
----
+- n8n runs in regular mode, not queue mode
+- public UI and public webhooks use the same external domain
+- TLS terminates at the external reverse proxy
+- Redis is internal-only, password-protected, and persisted with a named Docker volume
+- `NODE_FUNCTION_ALLOW_BUILTIN=*` remains enabled for compatibility with existing Code-node-heavy workflows
 
-## 🎯 What is this?
+That last point is a compatibility choice, not a hardening best practice.
 
-My personal Docker Compose setup for running n8n with supporting services, designed to work behind a Caddy reverse proxy for HTTPS access.
+## Prerequisites
 
-**Key Features**:
+- Docker Engine
+- Docker Compose v2
+- External Docker network `caddy-network`
+- External reverse proxy configuration that routes your n8n domain to `n8n:5678` on `caddy-network`
 
-- **🔄 n8n**: Workflow automation platform
-- **🗄️ PostgreSQL**: Persistent database storage
-- **📦 Redis**: In-memory data store for caching and state management
-- **🔒 HTTPS Ready**: Designed for Caddy reverse proxy
-- **🏥 Health Checks**: Automatic service recovery
-- **📦 Minimal Setup**: Just a few commands to get started
-
-## ⚡ Quick Start
+Create the shared proxy network once if needed:
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/nbsp1221/n8n-docker-setup.git
-cd n8n-docker-setup
-
-# 2. Set up environment
-cp .env.example .env
-
-# 3. Create Caddy network
-docker network create caddy-network
-
-# 4. Start services
-docker compose up -d
+docker network inspect caddy-network >/dev/null 2>&1 || docker network create caddy-network
 ```
 
-**Note**: n8n will be accessible via your Caddy reverse proxy, not directly via ports.
+## Quick Start
 
-## 📋 Prerequisites
+```bash
+cd n8n
+cp .env.example .env
+# edit .env before first start
 
-- Docker & Docker Compose
-- Caddy reverse proxy setup (see [Caddy Setup](#-caddy-setup))
-- Domain name (for HTTPS)
+docker compose up -d
+docker compose ps
+docker compose logs -f
+```
 
-## ⚙️ Configuration
+## Environment Variables
 
-### Environment Variables
+Required variables are documented in `.env.example`.
+The most important ones are:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `POSTGRES_ROOT_USER` | PostgreSQL admin user | `postgres` |
-| `POSTGRES_ROOT_PASSWORD` | PostgreSQL admin password | *set your own* |
-| `N8N_POSTGRES_DB` | n8n database name | `n8n` |
-| `N8N_POSTGRES_USER` | n8n database user | `n8n` |
-| `N8N_POSTGRES_PASSWORD` | n8n database password | *set your own* |
-| `N8N_PORT` | n8n internal port | `5678` |
-| `N8N_PROTOCOL` | Protocol for n8n | `https` |
-| `N8N_HOST` | Your domain name | `localhost` |
-| `WEBHOOK_URL` | Webhook base URL | `https://localhost:5678` |
-| `GENERIC_TIMEZONE` | Timezone setting | `Asia/Seoul` |
+- Postgres credentials and database names
+- `N8N_HOST`
+- `WEBHOOK_URL`
+- `N8N_PROXY_HOPS`
+- `N8N_ENCRYPTION_KEY`
+- `REDIS_PASSWORD`
 
-### Essential Setup
+`WEBHOOK_URL` must match the real external URL used by the reverse proxy.
+Because n8n runs behind a proxy, `N8N_PROXY_HOPS=1` is part of the expected baseline.
 
-1. **Set secure passwords**:
+## Reverse Proxy
 
-   ```bash
-   # Generate random passwords (replace with your own)
-   openssl rand -base64 32
-   ```
-
-2. **Configure your domain**:
-
-   ```bash
-   # In .env file
-   N8N_HOST=n8n.yourdomain.com
-   WEBHOOK_URL=https://n8n.yourdomain.com
-   ```
-
-## 🌐 Caddy Setup
-
-Since this setup requires Caddy reverse proxy, here's a basic Caddy configuration.
-
-### Caddyfile Example
+This repository does not manage the top-level Caddy or reverse-proxy configuration.
+The expected upstream pattern is:
 
 ```caddy
-n8n.yourdomain.com {
+n8n.example.com {
     reverse_proxy n8n:5678
 }
 ```
 
-### Docker Compose for Caddy
+The `n8n` service joins `caddy-network`, but `postgres` and `redis` do not.
 
-```yaml
-services:
-  caddy:
-    image: caddy
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-    networks:
-      - caddy-network
+## Redis Usage
 
-networks:
-  caddy-network:
-    name: caddy-network
-    external: true
-```
+Redis in this stack is meant for workflow shared state only.
 
-## 🛠️ Management
+- no host port is published
+- access is limited to `n8n-network`
+- a password is required
+- data persists across normal `docker compose down` / `up` cycles
 
-### Stopping the Service
+When creating an n8n Redis credential, use:
 
-To stop the containers:
+- Host: `redis`
+- Port: `6379`
+- Password: value of `REDIS_PASSWORD`
+- Database Number: usually `0`
 
-```bash
-docker compose down
-```
+## Compatibility Note
 
-### Upgrading Services
+`NODE_FUNCTION_ALLOW_BUILTIN=*` is intentionally left enabled in the Compose file.
+This keeps existing Code node patterns working during the move into this repository.
+If the workflow estate becomes more controlled later, that setting should be revisited separately.
 
-To upgrade to the latest versions:
+## Migration Note
+
+Migration from the old standalone n8n repository is a separate manual process.
+This stack definition only describes the canonical target deployment in `self-hosted/`.
+
+## Operations
 
 ```bash
-# Pull latest versions
 docker compose pull
-
-# Stop and remove older versions
-docker compose down
-
-# Start the containers
 docker compose up -d
+docker compose logs -f
+docker compose restart
+docker compose down
 ```
 
-## 📚 Resources
+## Verification
 
-- **[n8n Documentation](https://docs.n8n.io)** - Official workflow guides
-- **[PostgreSQL Documentation](https://www.postgresql.org/docs)** - Database reference
-- **[Redis Documentation](https://redis.io/docs/latest)** - In-memory data store
-- **[Caddy Documentation](https://caddyserver.com/docs)** - Reverse proxy setup
+Validate the stack file:
 
-## 📄 License
+```bash
+docker compose config -q
+```
 
-This project is open source and available under the [MIT License](LICENSE).
+Check application health:
 
----
+```bash
+docker compose exec -T n8n wget -qO- http://127.0.0.1:5678/healthz
+```
 
-<div align="center">
+Check database readiness:
 
-**⭐ Found this helpful? Give it a star!**
-
-*Personal n8n setup for workflow automation*
-
-[![GitHub stars](https://img.shields.io/github/stars/nbsp1221/n8n-docker-setup?style=social)](https://github.com/nbsp1221/n8n-docker-setup)
-
-</div>
+```bash
+docker compose exec -T postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+```

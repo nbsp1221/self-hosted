@@ -2,17 +2,29 @@ name: risuai
 
 services:
   risuai:
-    image: ghcr.io/kwaroran/risuai:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: risuai-self-hosted:latest
     container_name: risuai
-    restart: always
+    restart: unless-stopped
     init: true
+    environment:
+      TRUST_PROXY: "1"
     expose:
       - "6001"
     volumes:
       - ./save:/app/save
     networks:
       - caddy-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:6001/manifest.json').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 networks:
   caddy-network:
+    name: caddy-network
     external: true

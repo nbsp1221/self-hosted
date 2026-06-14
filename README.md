@@ -58,6 +58,7 @@ docker compose down
 | Service | Path | Status | Notes |
 | --- | --- | --- | --- |
 | Monitoring | [`monitoring/`](monitoring/) | maintained | Prometheus + node-exporter + cAdvisor + Grafana. See `monitoring/README.md`. |
+| Infisical | [`infisical/`](infisical/) | maintained | Secrets management platform with Postgres and Redis. See `infisical/README.md`. |
 | Karakeep | [`karakeep/`](karakeep/) | maintained | Bookmark manager with full-text search and optional AI tagging/summaries. See `karakeep/README.md`. |
 | LiteLLM Proxy + Postgres | [`litellm/`](litellm/) | maintained | Standardized LLM proxy. See `litellm/README.md`. |
 | Bifrost AI Gateway | [`bifrost/`](bifrost/) | maintained | OpenAI-compatible AI gateway. See `bifrost/README.md`. |

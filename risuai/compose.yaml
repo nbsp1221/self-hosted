@@ -1,6 +1,27 @@
 name: risuai
 
 services:
+  risuai-api-proxy:
+    build:
+      context: ./api-proxy
+      dockerfile: Dockerfile
+    image: risuai-api-proxy:latest
+    container_name: risuai-api-proxy
+    restart: unless-stopped
+    init: true
+    environment:
+      API_PROXY_TOKEN: "${API_PROXY_TOKEN}"
+    expose:
+      - "8787"
+    networks:
+      - caddy-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   risuai:
     build:
       context: .

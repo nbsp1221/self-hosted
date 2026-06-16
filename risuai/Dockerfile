@@ -8,6 +8,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 --branch main https://github.com/kwaroran/Risuai.git .
+COPY patches/api-v3-messageport-stream-bridge.patch /tmp/api-v3-messageport-stream-bridge.patch
+COPY patches/apply-stream-bridge-patch.sh /tmp/apply-stream-bridge-patch.sh
+RUN sh /tmp/apply-stream-bridge-patch.sh
 
 FROM node:26-slim AS deps
 WORKDIR /app

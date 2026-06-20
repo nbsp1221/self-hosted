@@ -7,10 +7,36 @@ discovery.docker "local" {
   host = "unix:///var/run/docker.sock"
 }
 
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.local.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    replacement   = "$1"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(.+)"
+    replacement   = "$1"
+    target_label  = "compose_service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    replacement   = "$1"
+    target_label  = "service_name"
+  }
+}
+
 loki.source.docker "containers" {
   host       = "unix:///var/run/docker.sock"
   targets    = discovery.docker.local.targets
   labels     = {source = "docker"}
+  relabel_rules = discovery.relabel.docker_logs.rules
   forward_to = [loki.process.sanitize.receiver]
 }
 
